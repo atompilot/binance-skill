@@ -38,10 +38,31 @@ Use this skill when the user asks about or needs to build:
 | API | Base URL | Auth | Purpose |
 |-----|----------|------|---------|
 | REST (Mainnet) | `https://api.binance.com` | API Key + Signature for trade endpoints | Market data, orders, account |
+| REST (Backup) | `https://api1~4.binance.com`, `https://api-gcp.binance.com` | Same as mainnet | Higher perf, lower stability |
+| REST (Market only) | `https://data-api.binance.vision` | None | Public market data, no trade endpoints |
 | REST (Testnet) | `https://testnet.binance.vision` | Separate testnet credentials | Development/testing (only `/api/*`, not `/sapi/*`) |
 | WebSocket Streams | `wss://stream.binance.com:9443` | None for market data | Real-time market data |
 | WebSocket API | `wss://ws-api.binance.com:443/ws-api/v3` | API Key + Signature | Request/response over WS |
 | User Data Stream | `wss://stream.binance.com:9443/ws/<listenKey>` | listenKey from REST | Account/order updates |
+
+## General Rules
+
+**Request parameters:**
+- GET → query string only
+- POST/PUT/DELETE → query string or body (`Content-Type: application/x-www-form-urlencoded`)
+- If same param in both, query string wins. Parameters can be in any order.
+
+**Data ordering (startTime / endTime):**
+- Neither → most recent items up to limit
+- `startTime` only → oldest items from that point
+- `endTime` only → most recent items before that point
+- Both → from `startTime`, not exceeding `endTime`
+
+**Timestamps:** milliseconds by default. Add header `X-MBX-TIME-UNIT: MICROSECOND` for microsecond precision.
+
+**Request timeout:** 10 seconds. A -1007 TIMEOUT does **not** mean the order failed — check User Data Stream or query order status.
+
+**WAF warning:** Avoid SQL keywords (`SELECT`, `DROP`, etc.) in parameter values — may be blocked by Binance's firewall.
 
 ## REST API — Market Data (No Auth)
 

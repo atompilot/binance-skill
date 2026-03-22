@@ -26,7 +26,7 @@ Include all parameters plus `timestamp` (current Unix time in milliseconds):
 symbol=BTCUSDT&side=BUY&type=MARKET&quantity=0.001&timestamp=1234567890123
 ```
 
-Optional: Add `recvWindow` (default 5000ms, max 60000ms) for timestamp tolerance.
+Optional: Add `recvWindow` for timestamp tolerance (see below).
 
 ### Step 2: Percent-Encode Parameters (RFC 3986)
 
@@ -91,14 +91,35 @@ curl -X POST "${BASE_URL}/api/v3/order?${QUERY}&signature=${SIGNATURE}" \
   -H "X-MBX-APIKEY: ${API_KEY}"
 ```
 
-## Timestamp Sync
+## recvWindow & Timing Security
 
-If you get error `-1021 Timestamp outside recvWindow`:
+`recvWindow` controls how long a signed request stays valid. The server checks twice:
+
+```
+serverTime = now()
+if timestamp < (serverTime + 1s) AND (serverTime - timestamp) <= recvWindow:
+    # start processing
+    serverTime = now()  # re-check after processing
+    if (serverTime - timestamp) <= recvWindow:
+        # forward to matching engine
+    else:
+        # reject (-1021)
+else:
+    # reject (-1021)
+```
+
+| Parameter | Default | Max | Precision |
+|-----------|---------|-----|-----------|
+| `recvWindow` | 5000 ms | 60000 ms | Supports up to 3 decimal places (e.g. `6000.346` for microseconds) |
+
+**Best practice**: Use a small `recvWindow` (5000ms or less). Large values increase vulnerability to replay attacks.
+
+### Fixing -1021 Errors
 
 1. Check server time: `GET /api/v3/time`
 2. Calculate offset: `server_time - local_time`
-3. Apply offset to all subsequent requests
-4. Or increase `recvWindow` (max 60000ms)
+3. Apply offset to all subsequent `timestamp` values
+4. Keep `recvWindow` small — don't just increase it to mask clock drift
 
 ## Security Best Practices
 
