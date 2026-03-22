@@ -2,7 +2,7 @@
 name: binance
 description: Binance Spot API integration for cryptocurrency market data and trading. Covers REST API (klines, trades, depth, ticker, orders, account), WebSocket Streams (aggTrade, kline, depth, bookTicker, miniTicker, user data), trading filters, rate limits, authentication (HMAC-SHA256/RSA/Ed25519), and error handling. Use when building trading bots, market data collectors, quantitative strategies, or any application integrating with Binance Spot.
 metadata:
-  version: 1.1.0
+  version: 1.2.0
   author: atompilot
 license: MIT
 ---
@@ -25,7 +25,8 @@ Use this skill when the user asks about or needs to build:
 
 | Topic | File | When to read |
 |-------|------|-------------|
-| WebSocket Streams | [`references/websocket.md`](./references/websocket.md) | Building real-time data collectors, stream payloads |
+| WebSocket Streams | [`references/websocket.md`](./references/websocket.md) | Real-time market data feeds, stream payloads |
+| WebSocket API | [`references/websocket-api.md`](./references/websocket-api.md) | Low-latency trading via WS, session auth, request/response format |
 | Authentication | [`references/authentication.md`](./references/authentication.md) | Signing requests, API key setup |
 | Rate Limits | [`references/rate-limits.md`](./references/rate-limits.md) | Weight budgets, backoff strategy, ban handling |
 | Trading Filters | [`references/filters.md`](./references/filters.md) | Order validation rules (LOT_SIZE, PRICE_FILTER, etc.) |
@@ -121,6 +122,20 @@ Full details and payload formats: [`references/websocket.md`](./references/webso
 {"method": "SUBSCRIBE", "params": ["btcusdt@aggTrade", "btcusdt@depth"], "id": 1}
 {"method": "UNSUBSCRIBE", "params": ["btcusdt@depth"], "id": 2}
 ```
+
+## WebSocket API — Quick Reference
+
+Full details: [`references/websocket-api.md`](./references/websocket-api.md)
+
+The WS API (`wss://ws-api.binance.com:443/ws-api/v3`) allows **bidirectional request/response** over WebSocket — lower latency than REST, supports session auth.
+
+- **Request**: `{"id": "req-1", "method": "order.place", "params": {...}}`
+- **Response**: `{"id": "req-1", "status": 200, "result": {...}, "rateLimits": [...]}`
+- **Session auth**: `session.logon` once → skip `apiKey`/`signature` on subsequent requests
+- **Microsecond timestamps**: append `?timeUnit=MICROSECOND` to connection URL
+- **Suppress rate limits**: add `"returnRateLimits": false` in params
+
+Key methods: `order.place`, `order.cancel`, `order.status`, `account.status`, `klines`, `depth`
 
 ## Rate Limits — Quick Reference
 
