@@ -27,6 +27,7 @@ Use this skill when the user asks about or needs to build:
 |-------|------|-------------|
 | WebSocket Streams | [`references/websocket.md`](./references/websocket.md) | Real-time market data feeds, stream payloads |
 | WebSocket API | [`references/websocket-api.md`](./references/websocket-api.md) | Low-latency trading via WS, session auth, request/response format |
+| User Data Stream | [`references/user-data-stream.md`](./references/user-data-stream.md) | Account/order/balance updates, executionReport fields, enums |
 | Authentication | [`references/authentication.md`](./references/authentication.md) | Signing requests, API key setup |
 | Rate Limits | [`references/rate-limits.md`](./references/rate-limits.md) | Weight budgets, backoff strategy, ban handling |
 | Trading Filters | [`references/filters.md`](./references/filters.md) | Order validation rules (LOT_SIZE, PRICE_FILTER, etc.) |

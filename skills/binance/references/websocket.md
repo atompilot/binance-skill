@@ -235,34 +235,7 @@ For each incoming event:
 
 ## User Data Stream
 
-### Create listenKey
-
-```bash
-curl -X POST "https://api.binance.com/api/v3/userDataStream" \
-  -H "X-MBX-APIKEY: your_api_key"
-```
-
-Response: `{"listenKey": "pqia91ma19a5s61cv6a81va65sd..."}`
-
-### Keepalive (every 30 min)
-
-```bash
-curl -X PUT "https://api.binance.com/api/v3/userDataStream?listenKey=pqia91ma..." \
-  -H "X-MBX-APIKEY: your_api_key"
-```
-
-### Connect
-
-```
-wss://stream.binance.com:9443/ws/pqia91ma19a5s61cv6a81va65sd...
-```
-
-### Events
-
-- `outboundAccountPosition` — balance changes
-- `balanceUpdate` — deposits/withdrawals/transfers
-- `executionReport` — order status updates
-- `listStatus` — OCO order updates
+See [`user-data-stream.md`](./user-data-stream.md) for complete reference (listenKey management, all event payloads, field tables, enums).
 
 ## Reconnection Best Practices
 
