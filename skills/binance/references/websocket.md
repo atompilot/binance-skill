@@ -8,6 +8,7 @@
 |------|-----|
 | Single stream | `wss://stream.binance.com:9443/ws/<streamName>` |
 | Combined streams | `wss://stream.binance.com:9443/stream?streams=<s1>/<s2>` |
+| Market data only | `wss://data-stream.binance.vision` (no user streams) |
 | Testnet | `wss://testnet.binance.vision/ws/<streamName>` |
 
 ### Connection Rules
@@ -15,9 +16,11 @@
 - Symbols must be **lowercase** (e.g. `btcusdt`, not `BTCUSDT`)
 - Max **1024 streams** per connection
 - Connection valid for **24 hours** (auto-disconnect after)
-- Server sends **ping every 20s** — must reply pong within 60s
-- Max **5 requests/second** per connection (subscribe/unsubscribe/etc.)
+- Server sends **ping every 20s** — must reply pong (with ping's payload) within 60s
+- Max **5 incoming messages/second** per connection (includes ping/pong frames + JSON commands)
 - Max **300 connection attempts** per 5 min per IP
+- Repeated violations result in **IP bans**
+- Optional: append `?timeUnit=MICROSECOND` for microsecond timestamps
 
 ### Combined Stream Format
 
@@ -56,6 +59,24 @@ Response: `{"result": null, "id": 1}`
 
 Response: `{"result": ["btcusdt@aggTrade"], "id": 3}`
 
+### Set/Get Property
+
+```json
+{"method": "SET_PROPERTY", "params": ["combined", true], "id": 5}
+{"method": "GET_PROPERTY", "params": ["combined"], "id": 6}
+```
+
+Note: `combined` defaults to `false` for `/ws/` endpoints, `true` for `/stream/` endpoints.
+
+### WS Error Codes
+
+| Code | Message |
+|------|---------|
+| 0 | Unknown property |
+| 1 | Invalid value type (expected Boolean) |
+| 2 | Invalid request (bad ID, unknown method, too many params, missing `method`) |
+| 3 | Invalid JSON |
+
 ## Stream Catalog
 
 ### Market Data Streams
@@ -64,12 +85,17 @@ Response: `{"result": ["btcusdt@aggTrade"], "id": 3}`
 |--------|-------------|-------------|-------------|
 | Aggregate Trade | `<symbol>@aggTrade` | Real-time | Compressed trades |
 | Trade | `<symbol>@trade` | Real-time | Individual trades |
-| Kline | `<symbol>@kline_<interval>` | 2000ms | Candlestick data |
+| Kline (UTC) | `<symbol>@kline_<interval>` | 1000ms (1s) / 2000ms (others) | Candlestick data |
+| Kline (UTC+8) | `<symbol>@kline_<interval>@+08:00` | 1000ms (1s) / 2000ms (others) | Candlestick in UTC+8 |
 | Mini Ticker | `<symbol>@miniTicker` | 1000ms | 24hr rolling mini stats |
 | All Mini Tickers | `!miniTicker@arr` | 1000ms | All symbols mini ticker |
-| Ticker | `<symbol>@ticker` | 1000ms | 24hr rolling full stats |
+| Ticker (24hr) | `<symbol>@ticker` | 1000ms | 24hr rolling full stats |
 | All Tickers | `!ticker@arr` | 1000ms | All symbols ticker |
+| Rolling Window | `<symbol>@ticker_<window>` | 1000ms | 1h/4h/1d window stats |
+| All Rolling Window | `!ticker_<window>@arr` | 1000ms | All symbols rolling |
 | Book Ticker | `<symbol>@bookTicker` | Real-time | Best bid/ask |
+| Average Price | `<symbol>@avgPrice` | 1000ms | 5-min average price |
+| Reference Price | `<symbol>@referencePrice` | 1000ms | Reference price |
 | Partial Depth | `<symbol>@depth<levels>` | 1000ms | Top N levels (5/10/20) |
 | Partial Depth (fast) | `<symbol>@depth<levels>@100ms` | 100ms | Top N levels, faster |
 | Diff. Depth | `<symbol>@depth` | 1000ms | Incremental depth updates |
@@ -181,12 +207,31 @@ Quantity `"0.000"` = remove that price level.
 
 ## Maintaining a Local Order Book
 
-1. Open `<symbol>@depth` or `<symbol>@depth@100ms` stream
-2. Buffer events
-3. Get snapshot: `GET /api/v3/depth?symbol=BTCUSDT&limit=1000`
-4. Drop events where `u <= lastUpdateId` from snapshot
-5. First event should have `U <= lastUpdateId+1` AND `u >= lastUpdateId+1`
-6. Apply each event: update price levels, remove where qty = 0
+### Initial Setup
+
+1. Connect to `<symbol>@depth` or `<symbol>@depth@100ms` stream
+2. **Buffer** all received events
+3. Fetch snapshot: `GET /api/v3/depth?symbol=BTCUSDT&limit=5000` (max 5000 levels/side)
+4. If snapshot's `lastUpdateId` < first buffered event's `U`, snapshot is stale — re-fetch
+5. Discard buffered events where `u <= lastUpdateId`
+6. First remaining event must satisfy: `U <= lastUpdateId+1` AND `u >= lastUpdateId+1`
+7. Set local book = snapshot, then apply buffered events in order
+
+### Applying Updates
+
+For each incoming event:
+
+1. **Skip** if event `u` < local book's update ID (already applied)
+2. **Restart from scratch** if event `U` > local book's update ID + 1 (missed events)
+3. For each price level in `b` (bids) and `a` (asks):
+   - Quantity = 0 → **remove** that price level
+   - Price not in book → **insert** new level
+   - Otherwise → **update** quantity
+4. Set local update ID = event's `u`
+
+**Normal sequence**: each event's `U` = previous event's `u` + 1.
+
+**Note**: Snapshot limited to 5000 levels per side. Levels beyond this are unknown unless they change.
 
 ## User Data Stream
 

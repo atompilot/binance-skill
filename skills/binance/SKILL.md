@@ -108,9 +108,11 @@ Full details and payload formats: [`references/websocket.md`](./references/webso
 |--------|-------------|-------|-------------|
 | Aggregate Trade | `<symbol>@aggTrade` | Real-time | Compressed trades |
 | Trade | `<symbol>@trade` | Real-time | Individual trades |
-| Kline | `<symbol>@kline_<interval>` | 2000ms | Candlestick data |
+| Kline | `<symbol>@kline_<interval>` | 1s→1000ms, others→2000ms | Candlestick data |
 | Mini Ticker | `<symbol>@miniTicker` | 1000ms | 24hr rolling mini stats |
+| Rolling Window | `<symbol>@ticker_<1h/4h/1d>` | 1000ms | Custom window stats |
 | Book Ticker | `<symbol>@bookTicker` | Real-time | Best bid/ask |
+| Average Price | `<symbol>@avgPrice` | 1000ms | 5-min average price |
 | Partial Depth | `<symbol>@depth<levels>@<speed>` | 1000/100ms | Top 5/10/20 levels |
 | Diff. Depth | `<symbol>@depth@<speed>` | 1000/100ms | Incremental updates |
 
