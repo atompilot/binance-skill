@@ -32,6 +32,7 @@ Use this skill when the user asks about or needs to build:
 | Rate Limits | [`references/rate-limits.md`](./references/rate-limits.md) | Weight budgets, backoff strategy, ban handling |
 | Trading Filters | [`references/filters.md`](./references/filters.md) | Order validation rules (LOT_SIZE, PRICE_FILTER, etc.) |
 | Official SDKs | [`references/sdk.md`](./references/sdk.md) | Using official connectors (Python, Node.js, etc.) |
+| Demo Mode | [`references/demo-mode.md`](./references/demo-mode.md) | Simulated trading with near-real market data |
 
 ## API Configuration
 
